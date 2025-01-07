@@ -13,7 +13,7 @@ FONT_HEADER_SIZE = 35
 FONT_SECTION_LABEL_SIZE = 26
 FONT_SERVICE_SIZE = 24
 FONT_TIME_SIZE = 26
-UPDATE_INTERVAL_MS = 5000  # Update every 5000 milliseconds (5 seconds)
+UPDATE_INTERVAL_MS = 30000  # Update every milliseconds
 
 def get_bus_arrival(api_key, bus_stop_code):
     url = f"https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival?BusStopCode={bus_stop_code}"
@@ -32,15 +32,18 @@ def get_bus_arrival(api_key, bus_stop_code):
         for service in services:
             service_no = service["ServiceNo"]
             arrival_times = []
+            types = []
             for bus in ["NextBus", "NextBus2", "NextBus3"]:
                 if service.get(bus):
                     eta = service[bus]["EstimatedArrival"]
+                    bus_type = service[bus].get("Type", "Other")
                     if eta:
                         eta_time = datetime.strptime(eta, "%Y-%m-%dT%H:%M:%S%z")
                         time_diff = (eta_time - datetime.now(eta_time.tzinfo)).total_seconds() / 60
                         arrival_times.append(round(time_diff))
+                        types.append(bus_type)
             if arrival_times:
-                bus_info.append((service_no, arrival_times))
+                bus_info.append((service_no, arrival_times, types))
         return bus_info
     else:
         return []
@@ -57,8 +60,8 @@ def update_display():
         widget.destroy()
 
     # Function to create a row with dynamic styling
-    def create_row(frame, row, service_no, arrival_times):
-        bg_color = "#f0f0f0" if row % 2 == 0 else "#ffffff"
+    def create_row(frame, row, service_no, arrival_times, types):
+        bg_color = "#f0f0f0"
 
         # Service number
         Label(
@@ -68,32 +71,46 @@ def update_display():
             width=10,
             anchor="center",
             bg=bg_color,
-        ).grid(row=row, column=0, padx=5, pady=2)
+        ).grid(row=row, column=0, padx=5, pady=2, sticky="nsew")
 
         # Create a frame to hold individual arrival times
         time_frame = Frame(frame, bg=bg_color)
-        time_frame.grid(row=row, column=1, padx=5, pady=2, sticky="w")
+        time_frame.grid(row=row, column=1, padx=5, pady=2, sticky="nsew")
 
-        # Display each arrival time as an individual label with highlighting
-        for i, time in enumerate(arrival_times):
-            fg_color = "#ff0000" if time < 3 else "#000000"  # Red for urgent times
+        # Configure grid weights for full-width background
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_columnconfigure(1, weight=3)
+
+        # Display each arrival time as an individual label with dynamic colors
+        for i, (time, bus_type) in enumerate(zip(arrival_times, types)):
+            # Determine font color based on 'Type'
+            if bus_type == "SD":
+                fg_color = "#0000ff"  # Blue for SD
+            elif bus_type == "DD":
+                fg_color = "#008000"  # Green for DD
+            else:
+                fg_color = "#000000"  # Default to black for others
+
+            # Determine background color based on urgency
+            bg_color = "#ffcc00" if time < 10 else "#f0f0f0"
+
             Label(
                 time_frame,
                 text=f"{time}",  # Display only the time
                 font=("Arial", FONT_TIME_SIZE, "bold"),  # Larger font for times
                 width=5,  # Consistent width for alignment
                 anchor="center",
-                bg=bg_color,
-                fg=fg_color,
-            ).grid(row=0, column=i, padx=10)  # Added padding for better spacing
+                bg=bg_color,  # Dynamic background color
+                fg=fg_color,  # Dynamic font color
+            ).grid(row=0, column=i, padx=10, sticky="nsew")  # Added sticky for full background fill
 
     # Update "Downstairs" section
-    for row, (service_no, arrival_times) in enumerate(bus_info_A):
-        create_row(downstairs_frame, row, service_no, arrival_times)
+    for row, (service_no, arrival_times, types) in enumerate(bus_info_A):
+        create_row(downstairs_frame, row, service_no, arrival_times, types)
 
     # Update "Opposite" section
-    for row, (service_no, arrival_times) in enumerate(bus_info_B):
-        create_row(opposite_frame, row, service_no, arrival_times)
+    for row, (service_no, arrival_times, types) in enumerate(bus_info_B):
+        create_row(opposite_frame, row, service_no, arrival_times, types)
 
     # Schedule next update
     root.after(UPDATE_INTERVAL_MS, update_display)
@@ -123,14 +140,14 @@ downstairs_label = Label(main_frame, text="Downstairs", font=("Arial", FONT_SECT
 downstairs_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
 downstairs_frame = Frame(main_frame, bg="#333333")
-downstairs_frame.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+downstairs_frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
 # Create "Opposite" section
 opposite_label = Label(main_frame, text="Opposite", font=("Arial", FONT_SECTION_LABEL_SIZE, "bold"), bg="#333333", fg="#ffcc00")
 opposite_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
 
 opposite_frame = Frame(main_frame, bg="#333333")
-opposite_frame.grid(row=3, column=0, padx=10, pady=10, sticky="w")
+opposite_frame.grid(row=3, column=0, padx=10, pady=10, sticky="nsew")
 
 # Start updating the display
 update_display()
