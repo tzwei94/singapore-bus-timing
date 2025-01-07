@@ -113,17 +113,17 @@ main_frame.pack(expand=True, fill="both", padx=10, pady=10)
 
 # Create "Downstairs" section
 downstairs_label = Label(main_frame, text="Downstairs", font=("Arial", 24, "bold"), bg="#333333", fg="#ffcc00")
-downstairs_label.grid(row=0, column=0, padx=10, pady=10)
+downstairs_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
 downstairs_frame = Frame(main_frame, bg="#333333")
-downstairs_frame.grid(row=1, column=0, padx=10, pady=10)
+downstairs_frame.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
 # Create "Opposite" section
 opposite_label = Label(main_frame, text="Opposite", font=("Arial", 24, "bold"), bg="#333333", fg="#ffcc00")
-opposite_label.grid(row=0, column=1, padx=10, pady=10)
+opposite_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
 
 opposite_frame = Frame(main_frame, bg="#333333")
-opposite_frame.grid(row=1, column=1, padx=10, pady=10)
+opposite_frame.grid(row=3, column=0, padx=10, pady=10, sticky="w")
 
 # Start updating the display
 update_display()
