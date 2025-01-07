@@ -8,6 +8,13 @@ from tkinter import Tk, Label, Frame
 # Load environment variables
 load_dotenv()
 
+# Constants for font sizes and update interval
+FONT_HEADER_SIZE = 35
+FONT_SECTION_LABEL_SIZE = 26
+FONT_SERVICE_SIZE = 24
+FONT_TIME_SIZE = 26
+UPDATE_INTERVAL_MS = 5000  # Update every 5000 milliseconds (5 seconds)
+
 def get_bus_arrival(api_key, bus_stop_code):
     url = f"https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival?BusStopCode={bus_stop_code}"
     headers = {
@@ -57,7 +64,7 @@ def update_display():
         Label(
             frame,
             text=service_no,
-            font=("Arial", 20),  # Larger font size for service number
+            font=("Arial", FONT_SERVICE_SIZE),  # Larger font size for service number
             width=10,
             anchor="center",
             bg=bg_color,
@@ -73,7 +80,7 @@ def update_display():
             Label(
                 time_frame,
                 text=f"{time}",  # Display only the time
-                font=("Arial", 24, "bold"),  # Larger font for times
+                font=("Arial", FONT_TIME_SIZE, "bold"),  # Larger font for times
                 width=5,  # Consistent width for alignment
                 anchor="center",
                 bg=bg_color,
@@ -89,7 +96,7 @@ def update_display():
         create_row(opposite_frame, row, service_no, arrival_times)
 
     # Schedule next update
-    root.after(5000, update_display)
+    root.after(UPDATE_INTERVAL_MS, update_display)
 
 
 # Initialize Raspberry Pi display
@@ -104,7 +111,7 @@ root.geometry("800x480")  # Adjust to your Raspberry Pi screen resolution
 root.configure(bg="#333333")  # Dark background for better contrast
 
 # Header
-header = Label(root, text="Bus Arrival Times", font=("Arial", 30, "bold"), bg="#444444", fg="white", pady=10)
+header = Label(root, text="Bus Arrival Times", font=("Arial", FONT_HEADER_SIZE, "bold"), bg="#444444", fg="white", pady=10)
 header.pack(fill="x")
 
 # Create main frames
@@ -112,14 +119,14 @@ main_frame = Frame(root, bg="#333333")
 main_frame.pack(expand=True, fill="both", padx=10, pady=10)
 
 # Create "Downstairs" section
-downstairs_label = Label(main_frame, text="Downstairs", font=("Arial", 24, "bold"), bg="#333333", fg="#ffcc00")
+downstairs_label = Label(main_frame, text="Downstairs", font=("Arial", FONT_SECTION_LABEL_SIZE, "bold"), bg="#333333", fg="#ffcc00")
 downstairs_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
 downstairs_frame = Frame(main_frame, bg="#333333")
 downstairs_frame.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
 # Create "Opposite" section
-opposite_label = Label(main_frame, text="Opposite", font=("Arial", 24, "bold"), bg="#333333", fg="#ffcc00")
+opposite_label = Label(main_frame, text="Opposite", font=("Arial", FONT_SECTION_LABEL_SIZE, "bold"), bg="#333333", fg="#ffcc00")
 opposite_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
 
 opposite_frame = Frame(main_frame, bg="#333333")
