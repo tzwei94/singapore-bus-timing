@@ -22,5 +22,7 @@ source .venv/bin/activate
 
 Run the main script: 
 ```
-python app/main.py
+python main.py
 ```
+
+sudo apt install python3-tk -y
