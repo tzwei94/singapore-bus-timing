@@ -18,7 +18,7 @@ BG_COLOR_HEADER = "#444444"
 BG_COLOR_CELL = "#f0f0f0"
 BG_COLOR_CRITICAL = "#FF4C4C"
 BG_COLOR_WARNING = "#FFA500"
-BG_COLOR_NORMAL = "#90EE90"
+BG_COLOR_NORMAL = "#f0f0f0"
 FONT_HEADER = ("Arial", 35, "bold")
 FONT_SECTION = ("Arial", 26, "bold")
 FONT_SERVICE = ("Arial", 24)
@@ -64,14 +64,14 @@ def get_bus_arrival(api_key, bus_stop_code):
     else:
         return []
 
-# Update the display with bus timings
+    # Update the display with bus timings
 def update_display():
     # Clear previous data
     for section_frame in section_frames:
         for widget in section_frame.winfo_children():
             widget.destroy()
 
-    # Create a row in the grid
+        # Create a row in the grid
     def create_row(frame, row, service_no, arrival_times, types):
         # Service number
         Label(
@@ -93,17 +93,19 @@ def update_display():
 
         # Populate arrival times
         for i, (time, bus_type) in enumerate(zip(arrival_times, types)):
+            # Set text color based on bus type
             fg_color = (
-                    FG_COLOR_TIME_SD if bus_type == "SD" else
-                    FG_COLOR_TIME_DD if bus_type == "DD" else
-                    FG_COLOR_TIME_DEFAULT
-                )
+                FG_COLOR_TIME_SD if bus_type == "SD" else
+                FG_COLOR_TIME_DD if bus_type == "DD" else
+                FG_COLOR_TIME_DEFAULT
+            )
 
-            bg_color = (
-                    BG_COLOR_CRITICAL if time <= 2 else
-                    BG_COLOR_WARNING if time <= 4 else
-                    BG_COLOR_NORMAL
-                )
+            # Set background and font colors dynamically
+            bg_color, fg_color = (
+                (BG_COLOR_CRITICAL, "white") if time <= 2 else
+                (BG_COLOR_WARNING, "black") if time <= 4 else
+                (BG_COLOR_NORMAL, "black")
+            )
 
             Label(
                 time_frame,
