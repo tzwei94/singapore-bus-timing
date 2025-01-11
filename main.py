@@ -71,7 +71,6 @@ def update_display():
         for widget in section_frame.winfo_children():
             widget.destroy()
 
-        # Create a row in the grid
     def create_row(frame, row, service_no, arrival_times, types):
         # Service number
         Label(
@@ -91,27 +90,30 @@ def update_display():
         frame.grid_columnconfigure(0, weight=1)
         frame.grid_columnconfigure(1, weight=3)
 
-        # Populate arrival times
+        # Populate arrival times and bus types
         for i, (time, bus_type) in enumerate(zip(arrival_times, types)):
-            # Set text color based on bus type
             fg_color = (
                 FG_COLOR_TIME_SD if bus_type == "SD" else
                 FG_COLOR_TIME_DD if bus_type == "DD" else
                 FG_COLOR_TIME_DEFAULT
             )
 
-            # Set background and font colors dynamically
-            bg_color, fg_color = (
-                (BG_COLOR_CRITICAL, "white") if time <= 2 else
-                (BG_COLOR_WARNING, "black") if time <= 4 else
-                (BG_COLOR_NORMAL, "black")
-            )
+            # Adjust background and foreground colors for better contrast
+            if time <= 2:
+                bg_color = BG_COLOR_CRITICAL
+                fg_color = "white"  # Ensure readability on red background
+            elif time <= 4:
+                bg_color = BG_COLOR_WARNING
+                fg_color = "black"  # Dark text on yellow background
+            else:
+                bg_color = BG_COLOR_NORMAL
 
+            # Combine time and bus type into one label
             Label(
                 time_frame,
-                text=f"{time}",
+                text=f"{time}m ({bus_type})",  # Compact format: "2m (SD)"
                 font=FONT_TIME,
-                width=TIME_CELL_WIDTH,
+                width=TIME_CELL_WIDTH + 4,  # Adjust width to fit combined text
                 anchor="center",
                 bg=bg_color,
                 fg=fg_color,
