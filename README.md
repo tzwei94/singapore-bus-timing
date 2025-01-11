@@ -1,6 +1,10 @@
 ## Setup
 
-1. Start venv
+1. Create venv
+   ```
+   python3 -m venv .venv
+   ```
+
 2. Install the required packages:
    ```
    pip install -r requirements.txt
@@ -15,12 +19,12 @@
    ```
 
 ## Usage
-Strat venv: 
+Strat venv:
 ```
 source .venv/bin/activate
 ```
 
-Run the main script: 
+Run the main script:
 ```
 python main.py
 ```

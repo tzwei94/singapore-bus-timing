@@ -16,7 +16,9 @@ WINDOW_SIZE = "800x480"
 BG_COLOR_MAIN = "#333333"
 BG_COLOR_HEADER = "#444444"
 BG_COLOR_CELL = "#f0f0f0"
-BG_COLOR_URGENT = "#ffcc00"
+BG_COLOR_CRITICAL = "#FF4C4C"
+BG_COLOR_WARNING = "#FFA500"
+BG_COLOR_NORMAL = "#90EE90"
 FONT_HEADER = ("Arial", 35, "bold")
 FONT_SECTION = ("Arial", 26, "bold")
 FONT_SERVICE = ("Arial", 24)
@@ -92,11 +94,16 @@ def update_display():
         # Populate arrival times
         for i, (time, bus_type) in enumerate(zip(arrival_times, types)):
             fg_color = (
-                FG_COLOR_TIME_SD if bus_type == "SD" else
-                FG_COLOR_TIME_DD if bus_type == "DD" else
-                FG_COLOR_TIME_DEFAULT
-            )
-            bg_color = BG_COLOR_URGENT if time < 3 else BG_COLOR_CELL
+                    FG_COLOR_TIME_SD if bus_type == "SD" else
+                    FG_COLOR_TIME_DD if bus_type == "DD" else
+                    FG_COLOR_TIME_DEFAULT
+                )
+
+            bg_color = (
+                    BG_COLOR_CRITICAL if time <= 2 else
+                    BG_COLOR_WARNING if time <= 4 else
+                    BG_COLOR_NORMAL
+                )
 
             Label(
                 time_frame,
@@ -125,11 +132,11 @@ root.configure(bg=BG_COLOR_MAIN)
 
 # Header
 header = Label(
-    root, 
-    text="Bus Arrival Times", 
-    font=FONT_HEADER, 
-    bg=BG_COLOR_HEADER, 
-    fg=FG_COLOR_HEADER, 
+    root,
+    text="Bus Arrival Times",
+    font=FONT_HEADER,
+    bg=BG_COLOR_HEADER,
+    fg=FG_COLOR_HEADER,
     pady=10
 )
 header.pack(fill="x")
@@ -147,10 +154,10 @@ section_frames = []
 
 for row_idx, (section_name, _) in enumerate(SECTION_NAMES):
     section_label = Label(
-        main_frame, 
-        text=section_name, 
-        font=FONT_SECTION, 
-        bg=BG_COLOR_MAIN, 
+        main_frame,
+        text=section_name,
+        font=FONT_SECTION,
+        bg=BG_COLOR_MAIN,
         fg=FG_COLOR_SECTION
     )
     section_label.grid(row=row_idx * 2, column=0, **LABEL_PADDING, sticky="n")  # Align label to the middle
