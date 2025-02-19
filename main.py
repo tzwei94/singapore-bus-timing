@@ -116,10 +116,12 @@ def update_display():
             else:
                 bg_color = BG_COLOR_NORMAL
 
+            bus_type_label = " (DD)" if bus_type == "DD" else ""
+
             # Combined label for time and bus type
             Label(
                 time_frame,
-                text=f"{time}m ({bus_type})",
+                text=f"{time}m{bus_type_label}",
                 font=FONT_TIME,
                 width=TIME_CELL_WIDTH + 4,  # Adjust width for combined text
                 anchor="center",
