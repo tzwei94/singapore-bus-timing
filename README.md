@@ -1,32 +1,55 @@
+# Singapore Bus Timing
+
+Native Tkinter display for two Singapore bus stops, sized for an 800×480 screen.
+
 ## Setup
 
-1. Create venv
-   ```
-   python3 -m venv .venv
-   ```
+Raspberry Pi OS Lite (32-bit) needs Python's Tkinter package and a running X11 session. A full desktop is optional. For a minimal X11 setup:
 
-2. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Rename the `.env.example` file to `.env` in the project root
+```bash
+sudo apt update
+sudo apt install python3-venv python3-tk xserver-xorg xinit openbox
+```
 
-4. Replace `your_lta_api_key` with your LTA DataMall API key, and `your_first_bus_stop_code` and `your_second_bus_stop_code` with the desired bus stop codes.
-   ```
-   API_KEY=your_lta_api_key //Get this from LTA DataMall
-   BUS_STOP_CODE_A=your_first_bus_stop_code
-   BUS_STOP_CODE_B=your_second_bus_stop_code
-   ```
+From the Pi's local console, start a minimal session with `startx /usr/bin/openbox-session -- :0`. Arrange for that session to start at boot if using the systemd service; setting `DISPLAY=:0` alone does not start X11. See [service setup](README-SERVICE.md).
+
+In the project directory, create and activate a virtual environment, then install the packages:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+```
+
+Edit `.env` with your LTA DataMall API key and the two bus stop codes. Keep the key private; do not commit `.env`.
+
+```dotenv
+# Get the API key from LTA DataMall.
+API_KEY=your_lta_api_key
+BUS_STOP_CODE_A=your_first_bus_stop_code
+BUS_STOP_CODE_B=your_second_bus_stop_code
+```
 
 ## Usage
-Strat venv:
-```
-source .venv/bin/activate
-```
 
-Run the main script:
-```
+Run in a working graphical session:
+
+```bash
+source .venv/bin/activate
 python main.py
 ```
 
-sudo apt install python3-tk -y
+The app polls both stops on one background worker, leaving the clock and interface responsive during HTTP requests. It refreshes every 30 seconds and retries after errors. Each request has a 3.05-second connect timeout and a 10-second read timeout; these are not a total end-to-end deadline.
+
+A failed stop retains its last successful arrivals with a visible retrying/stale status, while the other stop can still update. Countdowns are recalculated every second from arrival timestamps, and expired arrivals disappear even when offline. A successful response with no services shows an explicit empty state. Errors are logged to stderr, or the journal when run as a service.
+
+Malformed arrival slots retain the previous estimate and mark the stop stale until a valid response arrives. Legitimately empty slots show `--`.
+
+## Tests
+
+The data and refresh tests use Python's standard-library test runner:
+
+```bash
+python -m unittest discover -s tests -v
+```
