@@ -1,84 +1,69 @@
 # Singapore Bus Timing Service Setup
 
-Follow these steps to create and enable your systemd service for the Singapore Bus Timing Script.
+Complete the [application setup](README.md) first and verify `python main.py` works in an X11 session. Raspberry Pi OS Lite needs `python3-tk` and a minimal X11 session; a full desktop is optional.
 
----
+The service below runs the application on an existing X11 display. **`DISPLAY=:0` does not start X11.** Configure your Pi's local graphical session to start at boot as the same user, or start it manually from the local console before starting the service. If the display or X11 authorization file differs, adjust the example accordingly.
 
-## Step 1: Open the Service File with Vi
+## Install the service
 
-Open the file for editing using **vi**:
+Create `/etc/systemd/system/singapore-bus-timing.service`:
 
 ```bash
 sudo vi /etc/systemd/system/singapore-bus-timing.service
 ```
 
----
-
-## Step 2: Paste the Service File Content
-
-In **vi**, press `i` to enter insert mode and paste the following content:
+Replace `tzwei` and `/home/tzwei/singapore-bus-timing` with your username and checkout path. `XAUTHORITY` must point to the authorization file used by that user's X11 session.
 
 ```ini
 [Unit]
-Description=Singapore Bus Timing Script Service
-After=network.target
+Description=Singapore Bus Timing Display
+Wants=network-online.target
+After=network-online.target
 
 [Service]
-# User and working directory
+Type=simple
 User=tzwei
 WorkingDirectory=/home/tzwei/singapore-bus-timing
-
-# Set the DISPLAY environment variable for the physical screen
 Environment=DISPLAY=:0
-
-# Command to run the script
+Environment=XAUTHORITY=/home/tzwei/.Xauthority
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/home/tzwei/singapore-bus-timing/.venv/bin/python /home/tzwei/singapore-bus-timing/main.py
-
-# Restart policy
 Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-When finished, press `Esc` and type `:wq` to save and exit **vi**.
+The app reads `.env` from its project directory. Keep that file readable by the configured service user. `network-online.target` provides startup ordering; it does not guarantee DataMall is reachable. The app retries failed refreshes automatically.
 
----
-
-## Step 3: Reload the Systemd Daemon
-
-Apply the new service configuration:
+Reload systemd, enable startup, and start the service:
 
 ```bash
 sudo systemctl daemon-reload
+sudo systemctl enable --now singapore-bus-timing.service
 ```
 
----
-
-## Step 4: Enable the Service at Boot
-
-Enable the service so that it starts automatically at system boot:
+After updating application code or `.env`, restart it:
 
 ```bash
-sudo systemctl enable singapore-bus-timing.service
+sudo systemctl restart singapore-bus-timing.service
 ```
 
----
+Run `daemon-reload` again before restarting if you changed the service file.
 
-## Step 5: Start the Service
-
-Start your service immediately:
+## Check startup and refresh failures
 
 ```bash
-sudo systemctl start singapore-bus-timing.service
+sudo systemctl status singapore-bus-timing.service --no-pager
+sudo journalctl -u singapore-bus-timing.service -b -n 100 --no-pager
+sudo journalctl -u singapore-bus-timing.service -f
 ```
 
----
+- A Tkinter `no display` or `couldn't connect to display` error means X11 is unavailable, the display number is wrong, or the service user lacks the session's authorization. Verify the local X11 session and its `DISPLAY`/`XAUTHORITY` values.
+- HTTP, timeout, and response errors appear in the journal. Verify the key and stop codes in `.env`, network access, and the Pi's date/time. Logs do not need the API key itself.
+- A ticking clock confirms the UI loop is alive. Check each stop's retrying/stale status to tell whether arrivals are refreshing. During a failure, old arrivals continue counting down and disappear when expired.
 
-## Step 6: Check the Service Status
-
-Verify that the service is running correctly:
-
-```bash
-sudo systemctl status singapore-bus-timing.service
-```
+`Restart=always` restarts an exited process. It cannot detect a still-running process whose refresh has frozen. Recovery from ordinary HTTP and response failures happens inside the application; a manual service restart is a diagnostic step if it remains stuck.
