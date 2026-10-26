@@ -22,6 +22,28 @@ def payload():
 
 
 class ParsingTests(unittest.TestCase):
+    def test_monitored_is_preserved_for_each_upcoming_bus(self):
+        data = payload()
+        data["Services"][0]["NextBus"]["Monitored"] = 0
+        data["Services"][0]["NextBus2"]["Monitored"] = 1
+        arrivals = parse_services(data)[0].arrivals
+        self.assertEqual(arrivals[0].monitored, 0)
+        self.assertEqual(arrivals[1].monitored, 1)
+
+    def test_unknown_monitored_values_are_not_treated_as_location_based(self):
+        for value in (None, "", "bad", 2, True, False, 0.0, [], {}):
+            with self.subTest(value=value):
+                data = payload()
+                data["Services"][0]["NextBus"]["Monitored"] = value
+                self.assertIsNone(parse_services(data)[0].arrivals[0].monitored)
+
+    def test_string_monitored_values_are_normalized(self):
+        for value, expected in (("0", 0), ("1", 1), (" 0 ", 0)):
+            with self.subTest(value=value):
+                data = payload()
+                data["Services"][0]["NextBus"]["Monitored"] = value
+                self.assertEqual(parse_services(data)[0].arrivals[0].monitored, expected)
+
     def test_invalid_arrival_does_not_remove_service_or_shift_next_bus_slots(self):
         data = payload()
         data["Services"][0]["NextBus"]["EstimatedArrival"] = "invalid"
@@ -122,6 +144,17 @@ class PollingTests(unittest.TestCase):
 
 
 class StateTests(unittest.TestCase):
+    def test_cached_malformed_slot_keeps_the_source_of_its_retained_estimate(self):
+        first = payload()
+        first["Services"][0]["NextBus"]["Monitored"] = 0
+        state = StopState()
+        state.apply(StopUpdate(0, parse_services(first), NOW))
+        bad = payload()
+        bad["Services"][0]["NextBus"].update(EstimatedArrival="bad", Monitored=1)
+        state.apply(StopUpdate(0, parse_services(bad), NOW + timedelta(seconds=30)))
+        self.assertEqual(state.services[0].arrivals[0].monitored, 0)
+        self.assertTrue(state.error)
+
     def test_malformed_slot_keeps_previous_estimate_until_valid_recovery(self):
         state = StopState()
         state.apply(StopUpdate(0, parse_services(payload()), NOW))

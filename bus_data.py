@@ -20,6 +20,7 @@ STALE_SECONDS = 90
 class Arrival:
     estimated_at: datetime
     bus_type: str
+    monitored: Optional[int] = None
 
     def minutes_at(self, now):
         seconds = (self.estimated_at - now).total_seconds()
@@ -60,7 +61,12 @@ def parse_services(payload):
                     if eta.tzinfo is None:
                         raise ValueError("Arrival timestamp has no timezone")
                     bus_type = bus.get("Type")
-                    arrival = Arrival(eta, bus_type if isinstance(bus_type, str) else "Other")
+                    monitored = bus.get("Monitored")
+                    if isinstance(monitored, str) and monitored.strip() in ("0", "1"):
+                        monitored = int(monitored.strip())
+                    elif type(monitored) is not int or monitored not in (0, 1):
+                        monitored = None
+                    arrival = Arrival(eta, bus_type if isinstance(bus_type, str) else "Other", monitored)
                 except (AttributeError, TypeError, ValueError):
                     invalid = True
                     LOGGER.debug("Ignoring invalid arrival timestamp")
