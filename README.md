@@ -46,6 +46,12 @@ A failed stop retains its last successful arrivals with a visible retrying/stale
 
 Malformed arrival slots retain the previous estimate and mark the stop stale until a valid response arrives. Legitimately empty slots show `--`.
 
+## Arrival icons
+
+Each populated arrival has a source icon: a clock for operator-schedule times (`Monitored=0`), a location pin for location-based predictions (`Monitored=1`), or `?` when the source is unknown. A two-level bus silhouette replaces `(DD)` for double-deckers. A compact legend appears below the board.
+
+Red and orange backgrounds retain their arrival-urgency meaning. Source icons describe how the estimate was obtained; the separate stale/retrying status describes freshness. Empty or expired slots show no icons. The icons use native Canvas shapes, so no emoji font or new package is required.
+
 ## Tests
 
 The data and refresh tests use Python's standard-library test runner:

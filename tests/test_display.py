@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from bus_data import PollingWorker, StopState, StopUpdate, parse_services
+from bus_data import Arrival, PollingWorker, StopState, StopUpdate, parse_services
+from fake_canvas import RecordingCanvas
 
 
 class Widget:
@@ -50,6 +51,12 @@ class WorkerDouble:
         return updates
 
 
+class Canvas(Widget, RecordingCanvas):
+    def __init__(self, parent=None, **options):
+        Widget.__init__(self, parent, **options)
+        RecordingCanvas.__init__(self)
+
+
 class EmptyResponse:
     status_code = 200
     def json(self): return {"Services": []}
@@ -66,6 +73,7 @@ class DisplayTests(unittest.TestCase):
     def setUpClass(cls):
         fake_tk = types.ModuleType("tkinter")
         fake_tk.Tk = fake_tk.Label = fake_tk.Frame = Widget
+        fake_tk.Canvas = Canvas
         spec = importlib.util.spec_from_file_location(
             "bus_display_under_test", Path(__file__).parents[1] / "main.py"
         )
@@ -134,7 +142,7 @@ class DisplayTests(unittest.TestCase):
         self.assertEqual(root.callbacks, [])
         self.assertTrue(root.destroyed)
 
-    def test_real_panel_shows_missing_slots_colors_and_dd_labels(self):
+    def test_real_panel_shows_missing_slots_colors_and_dd_icons(self):
         now = datetime(2026, 10, 26, 3, 0, tzinfo=timezone.utc)
         services = parse_services({"Services": [{"ServiceNo": "12",
             "NextBus": {},
@@ -148,14 +156,57 @@ class DisplayTests(unittest.TestCase):
         panel.render(state, now)
         widgets = list(all_widgets(root))
         self.assertIn("--", [w.cget("text") for w in widgets])
-        dd = next(w for w in widgets if w.cget("text") == "8m (DD)")
+        dd = next(w for w in widgets if w.cget("text") == "8m")
         self.assertEqual(dd.cget("fg"), "#008000")
+        self.assertFalse(any("(DD)" in str(w.cget("text")) for w in widgets))
         urgent = next(w for w in widgets if w.cget("text") == "2m")
         self.assertEqual(urgent.cget("bg"), "#FF4C4C")
         before = len(widgets)
         for _ in range(100):
             panel.render(state, now)
         self.assertEqual(len(list(all_widgets(root))), before)
+
+    def test_arrival_icons_follow_source_and_hide_for_empty_slots(self):
+        now = datetime(2026, 10, 26, 3, 0, tzinfo=timezone.utc)
+        state = StopState()
+        state.apply(StopUpdate(0, parse_services({"Services": [{"ServiceNo": "12",
+            "NextBus": {"EstimatedArrival": "2026-10-26T11:02:00+08:00", "Type": "DD", "Monitored": 0},
+            "NextBus2": {"EstimatedArrival": "2026-10-26T11:08:00+08:00", "Type": "DD", "Monitored": 1},
+        }]}), now))
+        panel = self.module.StopPanel(Widget(), "Downstairs")
+        panel.render(state, now)
+        scheduled, location, empty = panel.rows["12"][1]
+        self.assertEqual(scheduled.source_kind, "scheduled")
+        self.assertEqual(location.source_kind, "location")
+        self.assertTrue(scheduled.bus_icon.items)
+        self.assertEqual(scheduled.label.cget("fg"), "white")
+        self.assertEqual(empty.source_icon.items, {})
+        self.assertEqual(empty.bus_icon.items, {})
+        before = scheduled.source_icon.created_total + scheduled.bus_icon.created_total
+        for _ in range(100):
+            panel.render(state, now)
+        self.assertEqual(scheduled.source_icon.created_total + scheduled.bus_icon.created_total, before)
+
+    def test_transient_icon_draw_failure_is_retried_on_next_tick(self):
+        now = datetime(2026, 10, 26, 3, 0, tzinfo=timezone.utc)
+        arrival = Arrival(datetime(2026, 10, 26, 3, 8, tzinfo=timezone.utc), "DD", 0)
+        cell = self.module.ArrivalCell(Widget())
+        with patch.object(self.module, "draw_source_icon", side_effect=RuntimeError("temporary draw error")):
+            with self.assertRaises(RuntimeError):
+                cell.render(arrival, now)
+        cell.render(arrival, now)
+        self.assertTrue(cell.source_icon.items)
+
+    def test_expired_arrival_removes_vehicle_and_source_icons(self):
+        now = datetime(2026, 10, 26, 3, 0, tzinfo=timezone.utc)
+        arrival = Arrival(datetime(2026, 10, 26, 3, 8, tzinfo=timezone.utc), "DD", 1)
+        cell = self.module.ArrivalCell(Widget())
+        cell.render(arrival, now)
+        self.assertTrue(cell.bus_icon.items)
+        cell.render(arrival, datetime(2026, 10, 26, 3, 10, tzinfo=timezone.utc))
+        self.assertEqual(cell.label.cget("text"), "--")
+        self.assertEqual(cell.bus_icon.items, {})
+        self.assertEqual(cell.source_icon.items, {})
 
 
 if __name__ == "__main__":
